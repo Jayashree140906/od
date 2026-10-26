@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+dist/
+build/
+client/dist/
+server/dist/
+
+# Environment
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Uploads
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Archives and build bundles
+*.zip
+campusflow-project/
+
+# IDE & OS
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+
