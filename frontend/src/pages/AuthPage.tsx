@@ -19,6 +19,24 @@ import {
   LogIn,
 } from 'lucide-react';
 
+const DEFAULT_DEPARTMENTS = [
+  { _id: '6adf7cc49164fd9f5ea574cb', code: 'CSE', name: 'Computer Science and Engineering' },
+  { _id: '6adf7cc49164fd9f5ea574cc', code: 'ECE', name: 'Electronics and Communication Engineering' },
+  { _id: '6adf7cc49164fd9f5ea574cd', code: 'IT', name: 'Information Technology' },
+  { _id: '6adf7cc49164fd9f5ea574ce', code: 'MECH', name: 'Mechanical Engineering' },
+];
+
+const DEFAULT_CLASSES = [
+  { _id: '6adf7cc59164fd9f5ea574d3', name: 'CSE-A', semester: 6, department: '6adf7cc49164fd9f5ea574cb' },
+  { _id: '6adf7cc59164fd9f5ea574d4', name: 'CSE-B', semester: 6, department: '6adf7cc49164fd9f5ea574cb' },
+  { _id: 'ece_sec_a', name: 'ECE-A', semester: 6, department: '6adf7cc49164fd9f5ea574cc' },
+  { _id: 'ece_sec_b', name: 'ECE-B', semester: 6, department: '6adf7cc49164fd9f5ea574cc' },
+  { _id: 'it_sec_a', name: 'IT-A', semester: 6, department: '6adf7cc49164fd9f5ea574cd' },
+  { _id: 'it_sec_b', name: 'IT-B', semester: 6, department: '6adf7cc49164fd9f5ea574cd' },
+  { _id: 'mech_sec_a', name: 'MECH-A', semester: 6, department: '6adf7cc49164fd9f5ea574ce' },
+  { _id: 'mech_sec_b', name: 'MECH-B', semester: 6, department: '6adf7cc49164fd9f5ea574ce' },
+];
+
 export const AuthPage: React.FC = () => {
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
@@ -38,16 +56,16 @@ export const AuthPage: React.FC = () => {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
-  const [regDepartment, setRegDepartment] = useState('');
-  const [regClassSection, setRegClassSection] = useState('');
+  const [regDepartment, setRegDepartment] = useState('6adf7cc49164fd9f5ea574cb');
+  const [regClassSection, setRegClassSection] = useState('6adf7cc59164fd9f5ea574d3');
   const [regRegisterNumber, setRegRegisterNumber] = useState('');
   const [regStaffId, setRegStaffId] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regSuccessMsg, setRegSuccessMsg] = useState('');
 
-  // Metadata for Registration dropdowns
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
+  // Metadata for Registration dropdowns (with instant robust fallbacks)
+  const [departments, setDepartments] = useState<any[]>(DEFAULT_DEPARTMENTS);
+  const [classes, setClasses] = useState<any[]>(DEFAULT_CLASSES);
 
   // Forgot password state
   const [showForgot, setShowForgot] = useState(false);
@@ -57,37 +75,42 @@ export const AuthPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [resetStep, setResetStep] = useState<1 | 2>(1);
 
-  // Load registration metadata
-  useEffect(() => {
+  // Load registration metadata from API
+  const loadMeta = () => {
     authApi
       .getRegisterMeta()
       .then((res) => {
         if (res.data?.success && res.data.data) {
-          setDepartments(res.data.data.departments || []);
-          setClasses(res.data.data.classes || []);
-          if (res.data.data.departments?.length > 0) {
-            setRegDepartment(res.data.data.departments[0]._id);
+          const apiDepts = res.data.data.departments;
+          const apiClasses = res.data.data.classes;
+          if (apiDepts && apiDepts.length > 0) {
+            setDepartments(apiDepts);
+            setRegDepartment((prev) => {
+              if (prev && apiDepts.some((d: any) => String(d._id) === String(prev))) {
+                return prev;
+              }
+              return apiDepts[0]._id;
+            });
+          }
+          if (apiClasses && apiClasses.length > 0) {
+            setClasses(apiClasses);
           }
         }
       })
       .catch((err) => {
         console.warn('Could not fetch registration metadata:', err);
       });
+  };
+
+  useEffect(() => {
+    loadMeta();
   }, []);
 
-  // Update default class section when department changes
   useEffect(() => {
-    if (regDepartment && classes.length > 0) {
-      const matchingClasses = classes.filter(
-        (c) => c.department?._id === regDepartment || c.department === regDepartment
-      );
-      if (matchingClasses.length > 0) {
-        setRegClassSection(matchingClasses[0]._id);
-      } else {
-        setRegClassSection('');
-      }
+    if (mode === 'register') {
+      loadMeta();
     }
-  }, [regDepartment, classes]);
+  }, [mode]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -222,9 +245,36 @@ export const AuthPage: React.FC = () => {
     }
   };
 
-  const filteredClasses = classes.filter(
-    (c) => c.department?._id === regDepartment || c.department === regDepartment
-  );
+  const filteredClasses = classes.filter((c) => {
+    const deptId = String(c.department?._id || c.department || '');
+    const deptCode = String(c.department?.code || '');
+    const currentDept = String(regDepartment || '');
+    return deptId === currentDept || (deptCode && deptCode === currentDept);
+  });
+
+  const displayClasses =
+    filteredClasses.length > 0
+      ? filteredClasses
+      : (() => {
+          const dept = departments.find(
+            (d) => String(d._id) === String(regDepartment) || d.code === regDepartment
+          );
+          const prefix = dept?.code || 'SEC';
+          return [
+            { _id: `${prefix}-A-sem6`, name: `${prefix}-A`, semester: 6 },
+            { _id: `${prefix}-B-sem6`, name: `${prefix}-B`, semester: 6 },
+          ];
+        })();
+
+  // Keep regClassSection in sync whenever department or available classes change
+  useEffect(() => {
+    if (displayClasses.length > 0) {
+      const match = displayClasses.some((c: any) => String(c._id) === String(regClassSection));
+      if (!match) {
+        setRegClassSection(displayClasses[0]._id);
+      }
+    }
+  }, [regDepartment, displayClasses, regClassSection]);
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -573,15 +623,11 @@ export const AuthPage: React.FC = () => {
                         onChange={(e) => setRegClassSection(e.target.value)}
                         className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                       >
-                        {filteredClasses.length > 0 ? (
-                          filteredClasses.map((c) => (
-                            <option key={c._id} value={c._id}>
-                              {c.name} (Sem {c.semester})
-                            </option>
-                          ))
-                        ) : (
-                          <option value="">No classes found</option>
-                        )}
+                        {displayClasses.map((c: any) => (
+                          <option key={c._id} value={c._id}>
+                            {c.name} (Sem {c.semester})
+                          </option>
+                        ))}
                       </select>
                     </div>
                   ) : (

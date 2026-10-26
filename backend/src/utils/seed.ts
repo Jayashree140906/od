@@ -130,6 +130,15 @@ async function seed() {
     facultyAdvisor: faculty2._id,
   });
 
+  await ClassSection.create([
+    { name: 'ECE-A', department: eceDept._id, semester: 6, academicYear: '2025-2026' },
+    { name: 'ECE-B', department: eceDept._id, semester: 6, academicYear: '2025-2026' },
+    { name: 'IT-A', department: itDept._id, semester: 6, academicYear: '2025-2026' },
+    { name: 'IT-B', department: itDept._id, semester: 6, academicYear: '2025-2026' },
+    { name: 'MECH-A', department: mechDept._id, semester: 6, academicYear: '2025-2026' },
+    { name: 'MECH-B', department: mechDept._id, semester: 6, academicYear: '2025-2026' },
+  ]);
+
   console.log('5. Seeding Subjects...');
   const subjMC = await Subject.create({
     code: 'CS8601',

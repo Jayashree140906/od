@@ -47,13 +47,39 @@ export class AuthController {
         }
       }
 
+      let departmentId: Types.ObjectId | undefined;
+      if (validated.department) {
+        if (Types.ObjectId.isValid(validated.department)) {
+          departmentId = new Types.ObjectId(validated.department);
+        } else {
+          const deptCode = validated.department.replace(/^dept_/, '').toUpperCase();
+          const deptDoc = await Department.findOne({ code: deptCode });
+          if (deptDoc) departmentId = deptDoc._id as Types.ObjectId;
+        }
+      }
+
+      let classSectionId: Types.ObjectId | undefined;
+      if (validated.classSection) {
+        if (Types.ObjectId.isValid(validated.classSection)) {
+          classSectionId = new Types.ObjectId(validated.classSection);
+        } else {
+          const secDoc = await ClassSection.findOne({
+            $or: [
+              { name: validated.classSection },
+              ...(departmentId ? [{ department: departmentId }] : []),
+            ],
+          });
+          if (secDoc) classSectionId = secDoc._id as Types.ObjectId;
+        }
+      }
+
       const newUser = await User.create({
         name: validated.name.trim(),
         email: validated.email.toLowerCase().trim(),
         password: validated.password,
         role: validated.role,
-        department: validated.department ? new Types.ObjectId(validated.department) : undefined,
-        classSection: validated.classSection ? new Types.ObjectId(validated.classSection) : undefined,
+        department: departmentId,
+        classSection: classSectionId,
         registerNumber: validated.registerNumber?.trim(),
         staffId: validated.staffId?.trim(),
         phone: validated.phone?.trim(),
@@ -82,10 +108,35 @@ export class AuthController {
 
   static async getRegisterMeta(_req: Request, res: Response, next: NextFunction): Promise<any> {
     try {
-      const [departments, classes] = await Promise.all([
-        Department.find().select('name code'),
-        ClassSection.find().select('name semester department').populate('department', 'name code'),
-      ]);
+      let departments = await Department.find().select('name code');
+      let classes = await ClassSection.find()
+        .select('name semester department')
+        .populate('department', 'name code');
+
+      // If database has no departments yet, auto-populate standard departments and sections
+      if (!departments || departments.length === 0) {
+        const createdDepts = await Department.insertMany([
+          { code: 'CSE', name: 'Computer Science and Engineering' },
+          { code: 'ECE', name: 'Electronics and Communication Engineering' },
+          { code: 'IT', name: 'Information Technology' },
+          { code: 'MECH', name: 'Mechanical Engineering' },
+        ]);
+        departments = createdDepts;
+
+        const defaultClasses: any[] = [];
+        for (const dept of createdDepts) {
+          defaultClasses.push(
+            { name: `${dept.code}-A`, department: dept._id, semester: 6, academicYear: '2025-2026' },
+            { name: `${dept.code}-B`, department: dept._id, semester: 6, academicYear: '2025-2026' }
+          );
+        }
+        await ClassSection.insertMany(defaultClasses);
+
+        classes = await ClassSection.find()
+          .select('name semester department')
+          .populate('department', 'name code');
+      }
+
       return sendSuccess(res, { departments, classes }, 'Registration metadata retrieved');
     } catch (err) {
       next(err);

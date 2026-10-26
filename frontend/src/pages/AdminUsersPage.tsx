@@ -58,17 +58,37 @@ export const AdminUsersPage: React.FC = () => {
   useEffect(() => {
     adminApi.getMetadata().then((res) => {
       if (res.data.success) {
-        setDepartments(res.data.data.departments || []);
-        setClasses(res.data.data.classes || []);
-        if (res.data.data.departments?.length > 0) {
-          setDepartmentId(res.data.data.departments[0]._id);
-        }
-        if (res.data.data.classes?.length > 0) {
-          setClassSectionId(res.data.data.classes[0]._id);
+        const depts = res.data.data.departments || [];
+        const cls = res.data.data.classes || [];
+        setDepartments(depts);
+        setClasses(cls);
+        if (depts.length > 0) {
+          setDepartmentId(depts[0]._id);
+          const firstDeptClasses = cls.filter(
+            (c: any) => String(c.department?._id || c.department) === String(depts[0]._id)
+          );
+          if (firstDeptClasses.length > 0) {
+            setClassSectionId(firstDeptClasses[0]._id);
+          }
         }
       }
     });
   }, []);
+
+  const filteredAdminClasses = classes.filter(
+    (c) => String(c.department?._id || c.department) === String(departmentId)
+  );
+
+  useEffect(() => {
+    if (departmentId && classes.length > 0) {
+      const matching = classes.filter(
+        (c) => String(c.department?._id || c.department) === String(departmentId)
+      );
+      if (matching.length > 0) {
+        setClassSectionId(matching[0]._id);
+      }
+    }
+  }, [departmentId, classes]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -399,11 +419,15 @@ export const AdminUsersPage: React.FC = () => {
                       onChange={(e) => setClassSectionId(e.target.value)}
                       className="w-full px-3 py-2 border border-slate-300 rounded-xl"
                     >
-                      {classes.map((c) => (
-                        <option key={c._id} value={c._id}>
-                          {c.name} (Sem {c.semester})
-                        </option>
-                      ))}
+                      {filteredAdminClasses.length === 0 ? (
+                        <option value="">No classes found</option>
+                      ) : (
+                        filteredAdminClasses.map((c) => (
+                          <option key={c._id} value={c._id}>
+                            {c.name} (Sem {c.semester})
+                          </option>
+                        ))
+                      )}
                     </select>
                   </div>
                 ) : (
