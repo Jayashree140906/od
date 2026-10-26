@@ -185,13 +185,14 @@ async function seed() {
   const student1 = await User.create({
     name: 'Alex Johnson',
     email: 'student@campusflow.edu',
-    password: 'Student@123',
+    password: '123456',
     role: ROLES.STUDENT,
     department: cseDept._id,
     classSection: class6A._id,
     registerNumber: '21CSR042',
     phone: '+91 98401 23456',
     isActive: true,
+    verificationStatus: 'verified',
   });
 
   const student2 = await User.create({
@@ -589,7 +590,7 @@ async function seed() {
   console.log('🎉 SEEDING COMPLETED SUCCESSFULLY!');
   console.log('===========================================================');
   console.log('DEMO ACCOUNTS READY TO TEST:');
-  console.log('1. Student:    student@campusflow.edu   / Student@123');
+  console.log('1. Student:    student@campusflow.edu   / 123456');
   console.log('2. Faculty:    faculty@campusflow.edu   / Faculty@123');
   console.log('3. HOD:        hod@campusflow.edu       / Hod@123');
   console.log('4. Admin:      jayashree140906@gmail.com / jayashree@2006');

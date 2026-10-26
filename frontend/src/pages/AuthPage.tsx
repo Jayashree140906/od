@@ -489,6 +489,39 @@ export const AuthPage: React.FC = () => {
                   </p>
                 </div>
               </form>
+
+              {/* Demo Credentials Card */}
+              <div className="mt-5 p-4 rounded-xl bg-gradient-to-br from-slate-50 to-indigo-50 border border-indigo-100">
+                <p className="text-[11px] font-bold text-indigo-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  Sample Demo Credentials
+                </p>
+                <div className="grid grid-cols-1 gap-1.5 text-[11px]">
+                  {([
+                    { role: 'Student', email: 'student@campusflow.edu', pass: '123456', color: 'emerald' },
+                    { role: 'Faculty', email: 'faculty@campusflow.edu', pass: 'Faculty@123', color: 'indigo' },
+                    { role: 'HOD',     email: 'hod@campusflow.edu',     pass: 'Hod@123',      color: 'purple' },
+                    { role: 'Admin',   email: 'jayashree140906@gmail.com', pass: 'jayashree@2006', color: 'amber' },
+                  ] as { role: string; email: string; pass: string; color: string }[]).map(({ role, email, pass }) => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => {
+                        setEmail(email);
+                        setPassword(pass);
+                        setSelectedRole(role.toLowerCase() as any);
+                        setError('');
+                      }}
+                      className="flex items-center justify-between px-3 py-2 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all group text-left cursor-pointer"
+                    >
+                      <span className="font-bold text-slate-700 w-14">{role}</span>
+                      <span className="text-slate-500 truncate flex-1 text-[10px]">{email}</span>
+                      <span className="text-slate-400 ml-2 font-mono text-[10px]">{pass}</span>
+                      <span className="ml-2 text-[10px] font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">USE →</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
