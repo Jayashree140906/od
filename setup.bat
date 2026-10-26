@@ -13,36 +13,36 @@ if %errorlevel% neq 0 (
 )
 
 :: Copy environment files if not present
-if not exist server\.env (
-    copy server\.env.example server\.env
-    echo [OK] Created server\.env
+if not exist backend\.env (
+    copy backend\.env.example backend\.env
+    echo [OK] Created backend\.env
 ) else (
-    echo [OK] server\.env exists
+    echo [OK] backend\.env exists
 )
 
-if not exist client\.env (
-    copy client\.env.example client\.env
-    echo [OK] Created client\.env
+if not exist frontend\.env (
+    copy frontend\.env.example frontend\.env
+    echo [OK] Created frontend\.env
 ) else (
-    echo [OK] client\.env exists
+    echo [OK] frontend\.env exists
 )
 
-if not exist server\uploads (
-    mkdir server\uploads
+if not exist backend\uploads (
+    mkdir backend\uploads
 )
 
 :: Install dependencies
 echo.
 echo Installing packages...
 call npm install
-call npm --prefix server install
-call npm --prefix client install
+call npm --prefix backend install
+call npm --prefix frontend install
 echo [OK] Dependencies installed successfully.
 
 :: Seed demo data
 echo.
 echo Seeding database with demo data...
-call npm --prefix server run seed
+call npm --prefix backend run seed
 
 echo.
 echo ============================================================

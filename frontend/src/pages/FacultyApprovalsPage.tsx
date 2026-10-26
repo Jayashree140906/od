@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { odApi, leaveApi, authApi } from '../services/api.js';
+import { odApi, leaveApi, authApi, getFileUrl } from '../services/api.js';
 import { ODRequest, LeaveRequest } from '../types/index.js';
 import { StatusBadge } from '../components/StatusBadge.js';
 import {
@@ -299,7 +299,7 @@ export const FacultyApprovalsPage: React.FC = () => {
                     <td className="py-3.5 px-6">
                       {item.documentUrl ? (
                         <a
-                          href={item.documentUrl}
+                          href={getFileUrl(item.documentUrl)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium underline"
@@ -403,7 +403,7 @@ export const FacultyApprovalsPage: React.FC = () => {
               {selectedItem.documentUrl && (
                 <div className="pt-2">
                   <a
-                    href={selectedItem.documentUrl}
+                    href={getFileUrl(selectedItem.documentUrl)}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium"

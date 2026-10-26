@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { odApi, leaveApi } from '../services/api.js';
+import { odApi, leaveApi, getFileUrl } from '../services/api.js';
 import { ODRequest, LeaveRequest, ApprovalHistoryItem } from '../types/index.js';
 import { StatusBadge } from '../components/StatusBadge.js';
 import { useSearchParams } from 'react-router-dom';
@@ -317,7 +317,7 @@ export const MyRequestsPage: React.FC = () => {
                 <div className="pt-1">
                   <span className="text-slate-400 block mb-1">Attached Document</span>
                   <a
-                    href={selectedRequest.documentUrl}
+                    href={getFileUrl(selectedRequest.documentUrl)}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium"

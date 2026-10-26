@@ -1,0 +1,22 @@
+# Render Blueprint Configuration for CampusFlow Backend
+services:
+  - type: web
+    name: campusflow-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false # Set in Render Dashboard: mongodb+srv://...
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        sync: false # Set in Render Dashboard: https://your-frontend.vercel.app

@@ -1,66 +1,34 @@
 import { Request, Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
-import { ODRequest, IODRequest } from '../models/ODRequest.js';
 import { LeaveRequest } from '../models/LeaveRequest.js';
+import { ODRequest } from '../models/ODRequest.js';
 import { User } from '../models/User.js';
 import { ClassSection } from '../models/ClassSection.js';
 import { Department } from '../models/Department.js';
 import { ApprovalHistory } from '../models/ApprovalHistory.js';
-import { AttendancePolicy } from '../models/AttendancePolicy.js';
 import { AttendanceService } from '../services/attendanceService.js';
 import { ApprovalWorkflowService } from '../services/approvalWorkflowService.js';
 import { NotificationService } from '../services/notificationService.js';
-import { ReportService } from '../services/reportService.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
-import { odRequestSchema, approvalActionSchema } from '../validators/index.js';
+import { leaveRequestSchema, approvalActionSchema } from '../validators/index.js';
 import { REQUEST_STATUS, ROLES } from '../config/constants.js';
 
-export class ODController {
+export class LeaveController {
   static async create(req: Request, res: Response, next: NextFunction): Promise<any> {
     try {
       if (!req.user) return sendError(res, 'Unauthorized', 401);
 
-      // Student verification
       const student = await User.findById(req.user.userId)
         .populate('department')
         .populate('classSection');
 
       if (!student) return sendError(res, 'Student profile not found', 404);
 
-      // Parse body (support both JSON and multipart form data)
-      let parsedBody: any = { ...req.body };
-      if (typeof parsedBody.declarationSigned === 'string') {
-        parsedBody.declarationSigned = parsedBody.declarationSigned === 'true';
-      }
-      if (typeof parsedBody.affectedSessions === 'string') {
-        try {
-          parsedBody.affectedSessions = JSON.parse(parsedBody.affectedSessions);
-        } catch {
-          parsedBody.affectedSessions = [];
-        }
-      }
-
-      const validated = odRequestSchema.parse(parsedBody);
+      const validated = leaveRequestSchema.parse(req.body);
       const startDate = new Date(validated.startDate);
       const endDate = new Date(validated.endDate);
 
-      // 1. Check for overlapping active requests
-      const overlappingOD = await ODRequest.findOne({
-        student: student._id,
-        status: { $in: [REQUEST_STATUS.PENDING_FACULTY, REQUEST_STATUS.PENDING_HOD, REQUEST_STATUS.APPROVED] },
-        $or: [
-          { startDate: { $lte: endDate }, endDate: { $gte: startDate } },
-        ],
-      });
-
-      if (overlappingOD) {
-        return sendError(
-          res,
-          `You already have an active OD request (${overlappingOD.refNo}) overlapping with the selected dates (${new Date(overlappingOD.startDate).toLocaleDateString()} - ${new Date(overlappingOD.endDate).toLocaleDateString()}).`,
-          400
-        );
-      }
-
+      // Check overlapping requests
       const overlappingLeave = await LeaveRequest.findOne({
         student: student._id,
         status: { $in: [REQUEST_STATUS.PENDING_FACULTY, REQUEST_STATUS.PENDING_HOD, REQUEST_STATUS.APPROVED] },
@@ -72,12 +40,27 @@ export class ODController {
       if (overlappingLeave) {
         return sendError(
           res,
-          `You already have an active Leave request (${overlappingLeave.refNo}) overlapping with the selected dates.`,
+          `You already have an active Leave request (${overlappingLeave.refNo}) overlapping with these dates.`,
           400
         );
       }
 
-      // 2. Determine assigned Faculty & HOD
+      const overlappingOD = await ODRequest.findOne({
+        student: student._id,
+        status: { $in: [REQUEST_STATUS.PENDING_FACULTY, REQUEST_STATUS.PENDING_HOD, REQUEST_STATUS.APPROVED] },
+        $or: [
+          { startDate: { $lte: endDate }, endDate: { $gte: startDate } },
+        ],
+      });
+
+      if (overlappingOD) {
+        return sendError(
+          res,
+          `You already have an active OD request (${overlappingOD.refNo}) overlapping with these dates.`,
+          400
+        );
+      }
+
       let assignedFacultyId: Types.ObjectId | undefined;
       let assignedHODId: Types.ObjectId | undefined;
 
@@ -95,19 +78,14 @@ export class ODController {
         }
       }
 
-      // 3. Determine if HOD approval is required
       const policy = await AttendanceService.getActivePolicy();
       const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      const requiresHOD =
-        durationDays > policy.hodApprovalRequiredDays ||
-        policy.categoriesRequiringHOD.includes(validated.category);
+      const requiresHOD = durationDays > policy.hodApprovalRequiredDays;
 
-      // 4. Generate unique reference number
       const year = new Date().getFullYear();
-      const count = await ODRequest.countDocuments();
-      const refNo = `OD-${year}-${String(count + 1001).padStart(5, '0')}`;
+      const count = await LeaveRequest.countDocuments();
+      const refNo = `LV-${year}-${String(count + 1001).padStart(5, '0')}`;
 
-      // 5. Handle file upload
       let documentUrl = '';
       let documentName = '';
       if (req.file) {
@@ -115,63 +93,54 @@ export class ODController {
         documentName = req.file.originalname;
       }
 
-      // 6. Create ODRequest
-      const od = await ODRequest.create({
+      const leave = await LeaveRequest.create({
         refNo,
         student: student._id,
         department: student.department?._id || student.department,
         classSection: student.classSection?._id || student.classSection,
-        category: validated.category,
-        eventName: validated.eventName,
-        organizer: validated.organizer,
-        location: validated.location,
-        description: validated.description,
+        leaveType: validated.leaveType as any,
+        reason: validated.reason,
         startDate,
         endDate,
-        affectedSessions: validated.affectedSessions || [],
         documentUrl,
         documentName,
-        declarationSigned: validated.declarationSigned,
         status: REQUEST_STATUS.PENDING_FACULTY,
         requiresHOD,
         assignedFaculty: assignedFacultyId,
         assignedHOD: assignedHODId,
       });
 
-      // Record initial history
       await ApprovalHistory.create({
-        requestId: od._id,
-        requestModel: 'ODRequest',
+        requestId: leave._id,
+        requestModel: 'LeaveRequest',
         approver: student._id,
         role: ROLES.STUDENT,
         action: 'SUBMITTED',
-        comments: 'Application submitted by student',
+        comments: 'Leave application submitted by student',
         previousStatus: 'None',
         newStatus: REQUEST_STATUS.PENDING_FACULTY,
         timestamp: new Date(),
       });
 
-      // Notify Faculty Advisor
       if (assignedFacultyId) {
         await NotificationService.createNotification(
           assignedFacultyId,
-          `New OD Application: ${od.refNo}`,
-          `${student.name} (${student.registerNumber}) applied for ${od.category} OD for ${od.eventName}.`,
+          `New Leave Application: ${leave.refNo}`,
+          `${student.name} applied for ${leave.leaveType} from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}.`,
           'ACTION_REQUIRED',
-          `/approvals/${od._id}`
+          `/approvals/${leave._id}`
         );
       }
 
-      // Notify student of successful submission
       await NotificationService.createNotification(
         student._id,
-        'OD Application Submitted Successfully',
-        `Your OD application ${od.refNo} for ${od.eventName} has been forwarded to your faculty advisor.`,
+        'Leave Application Submitted',
+        `Your leave request ${leave.refNo} has been forwarded to your faculty advisor.`,
         'SUCCESS',
-        `/requests/${od._id}`
+        `/requests/${leave._id}`
       );
 
-      return sendSuccess(res, od, 'OD application submitted successfully', 201);
+      return sendSuccess(res, leave, 'Leave application submitted successfully', 201);
     } catch (err) {
       next(err);
     }
@@ -183,9 +152,8 @@ export class ODController {
 
       const {
         status,
-        category,
+        leaveType,
         studentId,
-        departmentId,
         search,
         startDate,
         endDate,
@@ -199,11 +167,9 @@ export class ODController {
 
       const query: any = {};
 
-      // Role enforcement
       if (req.user.role === ROLES.STUDENT) {
         query.student = new Types.ObjectId(req.user.userId);
       } else if (req.user.role === ROLES.FACULTY) {
-        // Faculty sees requests assigned to them or in their department
         const me = await User.findById(req.user.userId);
         if (studentId) {
           query.student = new Types.ObjectId(studentId as string);
@@ -223,11 +189,8 @@ export class ODController {
       if (status && status !== 'All') {
         query.status = status;
       }
-      if (category && category !== 'All') {
-        query.category = category;
-      }
-      if (departmentId) {
-        query.department = new Types.ObjectId(departmentId as string);
+      if (leaveType && leaveType !== 'All') {
+        query.leaveType = leaveType;
       }
       if (studentId && req.user.role !== ROLES.STUDENT) {
         query.student = new Types.ObjectId(studentId as string);
@@ -237,7 +200,6 @@ export class ODController {
         query.endDate = { $lte: new Date(endDate as string) };
       }
 
-      // Search by student name / regNo or refNo
       if (search && typeof search === 'string' && search.trim()) {
         const searchRegex = new RegExp(search.trim(), 'i');
         const matchingUsers = await User.find({
@@ -248,14 +210,14 @@ export class ODController {
         query.$and.push({
           $or: [
             { refNo: searchRegex },
-            { eventName: searchRegex },
+            { reason: searchRegex },
             { student: { $in: matchingUsers.map((u) => u._id) } },
           ],
         });
       }
 
       const [items, total] = await Promise.all([
-        ODRequest.find(query)
+        LeaveRequest.find(query)
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limitNum)
@@ -264,10 +226,10 @@ export class ODController {
           .populate('classSection', 'name semester')
           .populate('assignedFaculty', 'name')
           .populate('assignedHOD', 'name'),
-        ODRequest.countDocuments(query),
+        LeaveRequest.countDocuments(query),
       ]);
 
-      return sendSuccess(res, items, 'OD requests fetched successfully', 200, {
+      return sendSuccess(res, items, 'Leave requests fetched successfully', 200, {
         page: pageNum,
         limit: limitNum,
         total,
@@ -282,29 +244,28 @@ export class ODController {
     try {
       const { id } = req.params;
 
-      const od = await ODRequest.findById(id)
+      const leave = await LeaveRequest.findById(id)
         .populate('student', 'name registerNumber email phone avatar')
         .populate('department', 'name code')
         .populate('classSection', 'name semester')
         .populate('assignedFaculty', 'name staffId email')
         .populate('assignedHOD', 'name staffId email');
 
-      if (!od) {
-        return sendError(res, 'OD Request not found', 404);
+      if (!leave) {
+        return sendError(res, 'Leave Request not found', 404);
       }
 
-      // Fetch audit & approval history
-      const history = await ApprovalHistory.find({ requestId: od._id })
+      const history = await ApprovalHistory.find({ requestId: leave._id })
         .sort({ timestamp: 1 })
         .populate('approver', 'name role email');
 
       return sendSuccess(
         res,
         {
-          request: od,
+          request: leave,
           history,
         },
-        'OD request details fetched'
+        'Leave request details fetched'
       );
     } catch (err) {
       next(err);
@@ -320,7 +281,7 @@ export class ODController {
 
       const result = await ApprovalWorkflowService.processDecision(
         id,
-        'ODRequest',
+        'LeaveRequest',
         req.user.userId,
         req.user.role,
         'APPROVE',
@@ -345,7 +306,7 @@ export class ODController {
 
       const result = await ApprovalWorkflowService.processDecision(
         id,
-        'ODRequest',
+        'LeaveRequest',
         req.user.userId,
         req.user.role,
         'REJECT',
@@ -365,24 +326,11 @@ export class ODController {
       const id = req.params.id as string;
       const result = await ApprovalWorkflowService.cancelRequestByStudent(
         id,
-        'ODRequest',
+        'LeaveRequest',
         req.user.userId
       );
 
       return sendSuccess(res, result.request, result.message);
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  static async downloadReceipt(req: Request, res: Response, next: NextFunction): Promise<any> {
-    try {
-      const id = req.params.id as string;
-      const pdfBuffer = await ReportService.generateODReceiptPDF(id);
-
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="OD-Receipt-${id}.pdf"`);
-      return res.send(pdfBuffer);
     } catch (err) {
       next(err);
     }

@@ -18,40 +18,40 @@ echo "✓ Found Node.js: $(node -v)"
 # 2. Setup Environment Files
 echo ""
 echo "📁 Setting up environment variables..."
-if [ ! -f "server/.env" ]; then
-    cp server/.env.example server/.env
-    echo "✓ Created server/.env from template"
+if [ ! -f "backend/.env" ]; then
+    cp backend/.env.example backend/.env
+    echo "✓ Created backend/.env from template"
 else
-    echo "✓ server/.env already exists"
+    echo "✓ backend/.env already exists"
 fi
 
-if [ ! -f "client/.env" ]; then
-    cp client/.env.example client/.env
-    echo "✓ Created client/.env from template"
+if [ ! -f "frontend/.env" ]; then
+    cp frontend/.env.example frontend/.env
+    echo "✓ Created frontend/.env from template"
 else
-    echo "✓ client/.env already exists"
+    echo "✓ frontend/.env already exists"
 fi
 
 # 3. Create upload folder
-mkdir -p server/uploads
+mkdir -p backend/uploads
 
 # 4. Install Dependencies
 echo ""
-echo "📦 Installing root, server, and client packages..."
+echo "📦 Installing root, backend, and frontend packages..."
 npm install
-npm --prefix server install
-npm --prefix client install
+npm --prefix backend install
+npm --prefix frontend install
 echo "✓ All packages installed successfully!"
 
 # 5. Seed Database
 echo ""
 echo "🌱 Seeding demo database with sample records..."
-if npm --prefix server run seed; then
+if npm --prefix backend run seed; then
     echo "✓ Database seeded successfully!"
 else
     echo "⚠️ Database seeding could not connect to MongoDB."
     echo "  Ensure MongoDB is running locally (mongodb://127.0.0.1:27017) or"
-    echo "  paste your MongoDB Atlas URI in server/.env under MONGODB_URI."
+    echo "  paste your MongoDB Atlas URI in backend/.env under MONGODB_URI."
 fi
 
 echo ""

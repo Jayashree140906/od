@@ -6,6 +6,8 @@ node_modules/
 # Build
 dist/
 build/
+frontend/dist/
+backend/dist/
 client/dist/
 server/dist/
 
@@ -25,6 +27,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
 server/uploads/*
 !server/uploads/.gitkeep
 

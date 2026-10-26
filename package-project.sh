@@ -18,11 +18,14 @@ echo "Creating $ARCHIVE_NAME (excluding bulky node_modules and cache)..."
 zip -r "$ARCHIVE_NAME" . \
   -x "node_modules/*" \
   -x "*/node_modules/*" \
+  -x "frontend/dist/*" \
+  -x "backend/dist/*" \
   -x "client/dist/*" \
   -x "server/dist/*" \
   -x ".git/*" \
   -x ".DS_Store" \
   -x "*/.DS_Store" \
+  -x "backend/uploads/*" \
   -x "server/uploads/*" \
   -x "*.log"
 

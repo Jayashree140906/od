@@ -5,13 +5,15 @@
   "description": "CampusFlow - Smart Student OD & Leave Management System with Attendance Integration",
   "scripts": {
     "setup": "npm install && npm run install:all && npm run seed",
-    "install:all": "npm --prefix server install && npm --prefix client install",
-    "seed": "npm --prefix server run seed",
-    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
-    "server": "npm --prefix server run dev",
-    "client": "npm --prefix client run dev",
-    "test": "npm --prefix server run test",
-    "build": "npm --prefix server run build && npm --prefix client run build",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "seed": "npm --prefix backend run seed",
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "backend": "npm --prefix backend run dev",
+    "frontend": "npm --prefix frontend run dev",
+    "server": "npm --prefix backend run dev",
+    "client": "npm --prefix frontend run dev",
+    "test": "npm --prefix backend run test",
+    "build": "npm --prefix backend run build && npm --prefix frontend run build",
     "package": "bash package-project.sh"
   },
   "devDependencies": {

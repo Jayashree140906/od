@@ -51,48 +51,79 @@ The database includes pre-configured demo accounts for immediate testing:
 
 ### 2. Environment Configuration
 The repository includes pre-configured environment files:
-- Server: `server/.env` (and `server/.env.example`)
-- Client: `client/.env` (and `client/.env.example`)
+- Backend: `backend/.env` (and `backend/.env.example`)
+- Frontend: `frontend/.env` (and `frontend/.env.example`)
 
 ### 3. Install Dependencies
 ```bash
-# In server directory:
-cd server
+# In backend directory:
+cd backend
 npm install
 
-# In client directory:
-cd ../client
+# In frontend directory:
+cd ../frontend
 npm install
 ```
 
 ### 4. Seed the Database
 Populate the database with departments, classes, subjects, timetables, and demo requests:
 ```bash
-npm --prefix server run seed
+npm --prefix backend run seed
 ```
 
 ### 5. Run the Automated Test Suite
 Execute the 13 backend integration tests:
 ```bash
-npm --prefix server run test
+npm --prefix backend run test
 ```
 
-### 6. Start the Servers
-In separate terminals, start the backend and frontend:
+### 6. Start the Servers Locally
+You can run both simultaneously from the root:
+```bash
+npm run dev
+```
+
+Or run each service separately in two different terminal windows:
 
 **Terminal 1 (Backend Server):**
 ```bash
-npm --prefix server run dev
-# Running on http://localhost:5000
-# Health check: http://localhost:5000/api/v1/health
-# Swagger Docs: http://localhost:5000/api-docs
+cd backend
+npm run dev
+# Running on http://localhost:5050
+# Health check: http://localhost:5050/api/v1/health
+# Swagger Docs: http://localhost:5050/api-docs
 ```
 
 **Terminal 2 (Frontend Client):**
 ```bash
-npm --prefix client run dev
+cd frontend
+npm run dev
 # Running on http://localhost:5173
 ```
+
+---
+
+## 🌐 Production Deployment: Vercel & Render
+
+### Frontend on Vercel
+1. Import this repository in [Vercel](https://vercel.com).
+2. Set **Root Directory** to `frontend`.
+3. Framework Preset: **Vite** (auto-detected).
+4. Add Environment Variable:
+   - `VITE_API_BASE_URL` = `https://your-backend.onrender.com/api/v1`
+5. Deploy! Single-page app routing is handled automatically by `frontend/vercel.json`.
+
+### Backend on Render
+1. Create a **New Web Service** on [Render](https://render.com).
+2. Connect this repository and set:
+   - **Root Directory**: `backend`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
+3. Add Environment Variables:
+   - `MONGODB_URI`: Your MongoDB Atlas connection string (`mongodb+srv://...`)
+   - `JWT_SECRET`: Random secure string
+   - `CLIENT_URL`: Your Vercel frontend URL (e.g. `https://your-frontend.vercel.app`)
+   - `NODE_ENV`: `production`
 
 ---
 

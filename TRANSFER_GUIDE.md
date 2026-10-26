@@ -35,9 +35,9 @@ setup.bat
 If you prefer manual terminal commands:
 ```bash
 npm install
-npm --prefix server install
-npm --prefix client install
-npm --prefix server run seed
+npm --prefix backend install
+npm --prefix frontend install
+npm --prefix backend run seed
 ```
 
 ---
@@ -86,24 +86,50 @@ npm test
 
 ```
 campusflow/
-├── client/              # React 19 + TypeScript + Tailwind CSS Frontend
+├── frontend/            # React 19 + TypeScript + Tailwind CSS Frontend (Vercel-ready)
 │   ├── src/
 │   │   ├── pages/       # Portals for Student, Faculty, HOD, and Admin
 │   │   ├── layouts/     # AppLayout with collapsible sidebar & topbar
 │   │   ├── components/  # Badges, Notifications, Switcher
-│   │   └── services/    # Axios API client
-├── server/              # Node.js + Express.js + TypeScript Backend
+│   │   └── services/    # Axios API client (configurable for Vercel)
+│   ├── vercel.json      # Single Page App routing configuration
+│   └── vite.config.ts
+├── backend/             # Node.js + Express.js + TypeScript Backend (Render-ready)
 │   ├── src/
 │   │   ├── controllers/ # Auth, OD, Leave, Attendance, Timetable, Admin
 │   │   ├── services/    # Approval FSM, Attendance Sync, PDF generator
 │   │   ├── models/      # Mongoose Schemas & MongoDB Indexes
 │   │   └── tests/       # Vitest & Supertest integration suite
+│   └── render.yaml      # Render blueprint configuration
 ├── docs/                # Architecture, DB Schema, and API specifications
 ├── setup.sh             # Mac/Linux automated setup script
 ├── setup.bat            # Windows automated setup script
 ├── package-project.sh   # Clean zip generator for sharing
-└── README.md            # Comprehensive project overview
+└── README.md            # Comprehensive project overview & Deployment Guide
 ```
+
+---
+
+## 🚀 Hosting: Vercel (Frontend) & Render (Backend)
+
+### Deploy Backend to Render:
+1. In Render Dashboard, click **New Web Service** and connect this repository.
+2. Set **Root Directory**: `backend`
+3. Set **Build Command**: `npm install && npm run build`
+4. Set **Start Command**: `npm start`
+5. Add Environment Variables:
+   - `MONGODB_URI`: your MongoDB Atlas connection string
+   - `JWT_SECRET`: your secret key (or generate random)
+   - `CLIENT_URL`: your Vercel deployment URL (e.g. `https://your-app.vercel.app`)
+   - `NODE_ENV`: `production`
+
+### Deploy Frontend to Vercel:
+1. In Vercel Dashboard, click **Add New Project** and select this repository.
+2. Set **Root Directory**: `frontend`
+3. Framework Preset will auto-detect as **Vite**.
+4. Add Environment Variable:
+   - `VITE_API_BASE_URL`: `https://your-backend.onrender.com/api/v1`
+5. Click **Deploy**!
 
 ---
 
@@ -111,7 +137,7 @@ campusflow/
 
 1. **MongoDB Connection Error:**
    - If using local MongoDB, make sure MongoDB is running (`brew services start mongodb-community` or `mongod`).
-   - If you don't have local MongoDB installed, create a free cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas), copy the connection string, and paste it into `server/.env`:
+   - If using MongoDB Atlas, paste the connection string into `backend/.env`:
      ```env
      MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/campusflow
      ```
@@ -119,4 +145,4 @@ campusflow/
 2. **Port Conflicts:**
    - Backend runs on port `5050` (to avoid macOS AirPlay on port 5000).
    - Frontend runs on port `5173`.
-   - Both can be changed in `server/.env` and `client/.env` if needed.
+   - Both can be changed in `backend/.env` and `frontend/.env` if needed.

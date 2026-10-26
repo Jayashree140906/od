@@ -20,20 +20,32 @@ export const createApp = () => {
   );
 
   const allowedOrigins = [
-    process.env.CLIENT_URL || 'http://localhost:5173',
+    process.env.CLIENT_URL,
     'http://localhost:5173',
     'http://127.0.0.1:5173',
-  ];
+  ].filter(Boolean) as string[];
 
   app.use(
     cors({
       origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps, curl, postman)
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(null, true); // Dev permissive
+        if (!origin) {
+          return callback(null, true);
         }
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        try {
+          const url = new URL(origin);
+          // Allow any vercel.app deployment (production or preview)
+          if (url.hostname.endsWith('.vercel.app')) {
+            return callback(null, true);
+          }
+        } catch {
+          // ignore parsing error
+        }
+        // Permissive fallback
+        return callback(null, true);
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
